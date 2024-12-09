@@ -40,7 +40,7 @@ public class OrderService {
         return orders.stream()
                 .map(order -> {
                     CustomerDTO customerDTO = new CustomerDTO(
-                            order.getCustomer().getCustomerId(),
+//                            order.getCustomer().getCustomerId(),
                             order.getCustomer().getFullName(),
                             order.getCustomer().getEmail(),
                             order.getCustomer().getPhone(),

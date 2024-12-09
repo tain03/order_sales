@@ -46,9 +46,9 @@ public class OrderController {
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
     public OrderDTO placeOrder(@RequestBody OrderDTO orderDTO) {
-        // Customer creation or lookup
+        // Kiểm tra nếu không có customerId, tự tạo hoặc tra cứu khách hàng mới
         Customer customer = customerService.findOrCreateCustomer(
-                orderDTO.getCustomer().getCustomerId(),
+                null,  // customerId là null nếu không có trong request
                 orderDTO.getCustomer().getCustomerName(),
                 orderDTO.getCustomer().getCustomerEmail(),
                 orderDTO.getCustomer().getCustomerPhone(),
@@ -57,6 +57,7 @@ public class OrderController {
 
         Order newOrder = orderService.createOrder(customer, orderDTO);
 
+        // Chuyển đổi các item trong đơn hàng thành DTO
         List<OrderItemDTO> orderItemDTOs = newOrder.getOrderItems().stream()
                 .map(item -> new OrderItemDTO(
                         item.getProduct().getProductId(),
@@ -67,6 +68,7 @@ public class OrderController {
                 ))
                 .collect(Collectors.toList());
 
+        // Chuyển đổi thông tin đơn hàng thành DTO
         OrderDetailsDTO orderDetails = new OrderDetailsDTO(
                 newOrder.getOrderId(),
                 newOrder.getOrderDate(),
@@ -76,9 +78,10 @@ public class OrderController {
                 newOrder.getNotes()
         );
 
+        // Chuyển đổi thông tin trả về
         OrderDTO response = new OrderDTO();
         response.setCustomer(new CustomerDTO(
-                customer.getCustomerId(),
+//                customer.getCustomerId(),
                 customer.getFullName(),
                 customer.getEmail(),
                 customer.getPhone(),
@@ -87,6 +90,7 @@ public class OrderController {
         response.setOrder(orderDetails);
         response.setOrderItems(orderItemDTOs);
 
+        // Gửi email xác nhận đơn hàng
         String orderDetailsText = generateOrderDetails(newOrder);
         emailService.sendOrderConfirmationEmail(customer.getEmail(), orderDetailsText);
 
