@@ -79,7 +79,6 @@ public class OrderService {
 
     @Transactional
     public Order createOrder(Customer customer, OrderDTO orderDTO) {
-        // Create a new order entity
         Order newOrder = new Order();
         newOrder.setCustomer(customer);
         newOrder.setOrderDate(LocalDateTime.now());
@@ -111,8 +110,6 @@ public class OrderService {
 
         newOrder.setTotalAmount(totalAmount);
 
-        Order savedOrder = orderRepository.save(newOrder);
-
-        return savedOrder;
+        return orderRepository.save(newOrder);
     }
 }
