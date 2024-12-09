@@ -4,14 +4,9 @@ import com.example.order_sales.dto.CustomerDTO;
 import com.example.order_sales.dto.OrderDTO;
 import com.example.order_sales.dto.OrderDetailsDTO;
 import com.example.order_sales.dto.OrderItemDTO;
-import com.example.order_sales.entity.Customer;
-import com.example.order_sales.entity.Order;
-import com.example.order_sales.entity.OrderItem;
-import com.example.order_sales.entity.Product;
-import com.example.order_sales.repository.OrderRepository;
-import com.example.order_sales.repository.CustomerRepository;
-import com.example.order_sales.repository.OrderItemRepository;
-import com.example.order_sales.repository.ProductRepository;
+import com.example.order_sales.entity.*;
+import com.example.order_sales.repository.*;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -26,13 +21,17 @@ public class OrderService {
     private final CustomerRepository customerRepository;
     private final OrderItemRepository orderItemRepository;
     private final ProductRepository productRepository;
+    private final OrderTransactionRepository orderTransactionRepository;
 
+    @Autowired
     public OrderService(OrderRepository orderRepository, CustomerRepository customerRepository,
-                        OrderItemRepository orderItemRepository, ProductRepository productRepository) {
+                        OrderItemRepository orderItemRepository, ProductRepository productRepository,
+                        OrderTransactionRepository orderTransactionRepository) {
         this.orderRepository = orderRepository;
         this.customerRepository = customerRepository;
         this.orderItemRepository = orderItemRepository;
         this.productRepository = productRepository;
+        this.orderTransactionRepository = orderTransactionRepository;
     }
 
     public List<OrderDTO> getAllOrders() {
@@ -94,22 +93,41 @@ public class OrderService {
                     .orElseThrow(() -> new RuntimeException("Product with ID " + itemDTO.getProductId() + " not found"));
 
             Double productPrice = product.getPrice();
-
             OrderItem orderItem = new OrderItem();
             orderItem.setOrder(newOrder);
             orderItem.setProduct(product);
             orderItem.setPrice(productPrice);
             orderItem.setQuantity(itemDTO.getQuantity());
-
             newOrder.getOrderItems().add(orderItem);
-
             totalAmount += productPrice * itemDTO.getQuantity();
-
             orderItemRepository.save(orderItem);
         }
 
         newOrder.setTotalAmount(totalAmount);
-
         return orderRepository.save(newOrder);
+    }
+
+    /**
+     * Updates the status of an order and creates a new transaction record for the change.
+     * @param orderId the ID of the order
+     * @param newStatus the new status to set
+     * @param notes optional notes for the status change (e.g., reason)
+     */
+    @Transactional
+    public void updateOrderStatus(Long orderId, String newStatus, String notes) {
+        Order order = orderRepository.findById(orderId)
+                .orElseThrow(() -> new RuntimeException("Order not found"));
+
+        OrderTransaction lastTransaction = orderTransactionRepository.findFirstByOrderOrderByChangedAtDesc(order);
+        String previousStatus = (lastTransaction != null) ? lastTransaction.getCurrentStatus() : "CREATED";
+
+        OrderTransaction orderTransaction = new OrderTransaction();
+        orderTransaction.setOrder(order);
+        orderTransaction.setPreviousStatus(previousStatus);
+        orderTransaction.setCurrentStatus(newStatus);
+        orderTransaction.setChangedAt(LocalDateTime.now());
+        orderTransaction.setNotes(notes);
+
+        orderTransactionRepository.save(orderTransaction);
     }
 }

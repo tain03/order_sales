@@ -90,6 +90,15 @@ public class OrderController {
         return response;
     }
 
+    @Operation(summary = "Update order status", description = "Update the status of an existing order and log the transaction")
+    @PutMapping("/{orderId}/status")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void updateOrderStatus(@PathVariable Long orderId,
+                                  @RequestParam String newStatus,
+                                  @RequestParam(required = false) String notes) {
+        // Call the service to update the order status and log the transaction
+        orderService.updateOrderStatus(orderId, newStatus, notes);
+    }
 
     private String generateOrderDetails(Order order) {
         StringBuilder orderDetails = new StringBuilder();

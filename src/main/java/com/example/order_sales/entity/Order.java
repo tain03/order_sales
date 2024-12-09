@@ -28,5 +28,5 @@ public class Order {
     private String notes;
 
     @OneToMany(mappedBy = "order", cascade = CascadeType.ALL, orphanRemoval = true)
-    private List<OrderItem> orderItems = new ArrayList<>();  // Initialize to avoid NullPointerException
+    private List<OrderItem> orderItems = new ArrayList<>();
 }

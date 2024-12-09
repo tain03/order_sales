@@ -19,13 +19,12 @@ public class EmailService {
         SimpleMailMessage mailMessage = new SimpleMailMessage();
         mailMessage.setTo(customerEmail);
         mailMessage.setSubject("Order Confirmation - Your Order #");
-        mailMessage.setText(orderDetails); // You can use HTML formatting as needed
+        mailMessage.setText(orderDetails);
 
         try {
             javaMailSender.send(mailMessage);
         } catch (Exception e) {
             e.printStackTrace();
-            // Log error or notify the admin
         }
     }
 }
