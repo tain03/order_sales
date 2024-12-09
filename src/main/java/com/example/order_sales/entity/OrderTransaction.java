@@ -19,8 +19,12 @@ public class OrderTransaction {
     @JoinColumn(name = "order_id", referencedColumnName = "orderId")
     private Order order;
 
-    private String previousStatus;
-    private String currentStatus;
+    @Enumerated(EnumType.STRING) // Lưu trạng thái dưới dạng chuỗi
+    private OrderStatus previousStatus;  // Trạng thái cũ
+
+    @Enumerated(EnumType.STRING) // Lưu trạng thái dưới dạng chuỗi
+    private OrderStatus currentStatus;   // Trạng thái mới
+
     private LocalDateTime changedAt;
     private String notes;
 }

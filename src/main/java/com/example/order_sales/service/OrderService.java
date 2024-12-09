@@ -114,14 +114,15 @@ public class OrderService {
      * @param notes optional notes for the status change (e.g., reason)
      */
     @Transactional
-    public void updateOrderStatus(Long orderId, String newStatus, String notes) {
+    public void updateOrderStatus(Long orderId, OrderStatus newStatus, String notes) {
         Order order = orderRepository.findById(orderId)
                 .orElseThrow(() -> new RuntimeException("Order not found"));
 
         OrderTransaction lastTransaction = orderTransactionRepository.findFirstByOrderOrderByChangedAtDesc(order);
-        String previousStatus = (lastTransaction != null) ? lastTransaction.getCurrentStatus() : "CREATED";
+        OrderStatus previousStatus = (lastTransaction != null) ? lastTransaction.getCurrentStatus() : OrderStatus.CREATED;
 
         OrderTransaction orderTransaction = new OrderTransaction();
+
         orderTransaction.setOrder(order);
         orderTransaction.setPreviousStatus(previousStatus);
         orderTransaction.setCurrentStatus(newStatus);

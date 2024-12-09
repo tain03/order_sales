@@ -7,11 +7,13 @@ import com.example.order_sales.dto.OrderItemDTO;
 import com.example.order_sales.entity.Customer;
 import com.example.order_sales.entity.Order;
 import com.example.order_sales.entity.OrderItem;
+import com.example.order_sales.entity.OrderStatus;
 import com.example.order_sales.service.OrderService;
 import com.example.order_sales.service.CustomerService;
 import com.example.order_sales.service.EmailService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
 
@@ -27,6 +29,7 @@ public class OrderController {
     private final CustomerService customerService;
     private final EmailService emailService;
 
+    @Autowired
     public OrderController(OrderService orderService, CustomerService customerService, EmailService emailService) {
         this.orderService = orderService;
         this.customerService = customerService;
@@ -94,7 +97,7 @@ public class OrderController {
     @PutMapping("/{orderId}/status")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public void updateOrderStatus(@PathVariable Long orderId,
-                                  @RequestParam String newStatus,
+                                  @RequestParam OrderStatus newStatus,
                                   @RequestParam(required = false) String notes) {
         // Call the service to update the order status and log the transaction
         orderService.updateOrderStatus(orderId, newStatus, notes);
