@@ -1,6 +1,8 @@
 package com.example.order_sales.controller;
 
+import com.example.order_sales.dto.CustomerDTO;
 import com.example.order_sales.dto.OrderDTO;
+import com.example.order_sales.dto.OrderDetailsDTO;
 import com.example.order_sales.dto.OrderItemDTO;
 import com.example.order_sales.entity.Customer;
 import com.example.order_sales.entity.Order;
@@ -41,12 +43,13 @@ public class OrderController {
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
     public OrderDTO placeOrder(@RequestBody OrderDTO orderDTO) {
+        // Customer creation or lookup
         Customer customer = customerService.findOrCreateCustomer(
-                orderDTO.getCustomerId(),
-                orderDTO.getCustomerName(),
-                orderDTO.getCustomerEmail(),
-                orderDTO.getCustomerPhone(),
-                orderDTO.getShippingAddress()
+                orderDTO.getCustomer().getCustomerId(),
+                orderDTO.getCustomer().getCustomerName(),
+                orderDTO.getCustomer().getCustomerEmail(),
+                orderDTO.getCustomer().getCustomerPhone(),
+                orderDTO.getCustomer().getShippingAddress()
         );
 
         Order newOrder = orderService.createOrder(customer, orderDTO);
@@ -56,29 +59,37 @@ public class OrderController {
                         item.getProduct().getProductId(),
                         item.getProduct().getProductName(),
                         item.getPrice(),
-                        item.getQuantity()
+                        item.getQuantity(),
+                        item.getPrice() * item.getQuantity()
                 ))
                 .collect(Collectors.toList());
 
-        String orderDetails = generateOrderDetails(newOrder);
-
-        emailService.sendOrderConfirmationEmail(customer.getEmail(), orderDetails);
-
-        return new OrderDTO(
+        OrderDetailsDTO orderDetails = new OrderDetailsDTO(
                 newOrder.getOrderId(),
-                newOrder.getCustomer().getCustomerId(),
-                newOrder.getCustomer().getFullName(),
-                newOrder.getCustomer().getEmail(),
-                newOrder.getCustomer().getPhone(),
                 newOrder.getOrderDate(),
                 newOrder.getTotalAmount(),
-                newOrder.getShippingAddress(),
                 newOrder.getShippingMethod(),
                 newOrder.getPaymentMethod(),
-                newOrder.getNotes(),
-                orderItemDTOs
+                newOrder.getNotes()
         );
+
+        OrderDTO response = new OrderDTO();
+        response.setCustomer(new CustomerDTO(
+                customer.getCustomerId(),
+                customer.getFullName(),
+                customer.getEmail(),
+                customer.getPhone(),
+                customer.getAddress()
+        ));
+        response.setOrder(orderDetails);
+        response.setOrderItems(orderItemDTOs);
+
+        String orderDetailsText = generateOrderDetails(newOrder);
+        emailService.sendOrderConfirmationEmail(customer.getEmail(), orderDetailsText);
+
+        return response;
     }
+
 
     private String generateOrderDetails(Order order) {
         StringBuilder orderDetails = new StringBuilder();

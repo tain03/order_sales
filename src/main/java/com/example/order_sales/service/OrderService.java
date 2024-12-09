@@ -1,6 +1,8 @@
 package com.example.order_sales.service;
 
+import com.example.order_sales.dto.CustomerDTO;
 import com.example.order_sales.dto.OrderDTO;
+import com.example.order_sales.dto.OrderDetailsDTO;
 import com.example.order_sales.dto.OrderItemDTO;
 import com.example.order_sales.entity.Customer;
 import com.example.order_sales.entity.Order;
@@ -23,62 +25,72 @@ public class OrderService {
     private final OrderRepository orderRepository;
     private final CustomerRepository customerRepository;
     private final OrderItemRepository orderItemRepository;
-    private final ProductRepository productRepository;  // Injected ProductRepository
+    private final ProductRepository productRepository;
 
     public OrderService(OrderRepository orderRepository, CustomerRepository customerRepository,
                         OrderItemRepository orderItemRepository, ProductRepository productRepository) {
         this.orderRepository = orderRepository;
         this.customerRepository = customerRepository;
         this.orderItemRepository = orderItemRepository;
-        this.productRepository = productRepository;  // Initialize ProductRepository
+        this.productRepository = productRepository;
     }
 
-    /**
-     * Retrieves all orders as a list of OrderDTOs.
-     * @return a list of OrderDTO objects.
-     */
     public List<OrderDTO> getAllOrders() {
         List<Order> orders = orderRepository.findAll();
+
         return orders.stream()
-                .map(order -> new OrderDTO(
-                        order.getOrderId(),
-                        order.getCustomer().getCustomerId(),
-                        order.getCustomer().getFullName(),
-                        order.getCustomer().getEmail(),
-                        order.getCustomer().getPhone(),
-                        order.getOrderDate(),
-                        order.getTotalAmount(),
-                        order.getShippingAddress(),
-                        order.getShippingMethod(),
-                        order.getPaymentMethod(),
-                        order.getNotes(),
-                        order.getOrderItems().stream()
-                                .map(item -> new OrderItemDTO(
-                                        item.getProduct().getProductId(),
-                                        item.getProduct().getProductName(),
-                                        item.getPrice(),
-                                        item.getQuantity()
-                                ))
-                                .collect(Collectors.toList())
-                ))
+                .map(order -> {
+                    CustomerDTO customerDTO = new CustomerDTO(
+                            order.getCustomer().getCustomerId(),
+                            order.getCustomer().getFullName(),
+                            order.getCustomer().getEmail(),
+                            order.getCustomer().getPhone(),
+                            order.getCustomer().getAddress()
+                    );
+
+                    OrderDetailsDTO orderDetailsDTO = new OrderDetailsDTO(
+                            order.getOrderId(),
+                            order.getOrderDate(),
+                            order.getTotalAmount(),
+                            order.getShippingMethod(),
+                            order.getPaymentMethod(),
+                            order.getNotes()
+                    );
+
+                    List<OrderItemDTO> orderItemDTOs = order.getOrderItems().stream()
+                            .map(item -> new OrderItemDTO(
+                                    item.getProduct().getProductId(),
+                                    item.getProduct().getProductName(),
+                                    item.getPrice(),
+                                    item.getQuantity(),
+                                    item.getPrice() * item.getQuantity()
+                            ))
+                            .collect(Collectors.toList());
+
+                    OrderDTO orderDTO = new OrderDTO();
+                    orderDTO.setCustomer(customerDTO);
+                    orderDTO.setOrder(orderDetailsDTO);
+                    orderDTO.setOrderItems(orderItemDTOs);
+
+                    return orderDTO;
+                })
                 .collect(Collectors.toList());
     }
 
     @Transactional
     public Order createOrder(Customer customer, OrderDTO orderDTO) {
+        // Create a new order entity
         Order newOrder = new Order();
         newOrder.setCustomer(customer);
-
         newOrder.setOrderDate(LocalDateTime.now());
-
-        newOrder.setShippingAddress(orderDTO.getShippingAddress());
-        newOrder.setShippingMethod(orderDTO.getShippingMethod());
-        newOrder.setPaymentMethod(orderDTO.getPaymentMethod());
-        newOrder.setNotes(orderDTO.getNotes());
+        newOrder.setShippingAddress(orderDTO.getCustomer().getShippingAddress());
+        newOrder.setShippingMethod(orderDTO.getOrder().getShippingMethod());
+        newOrder.setPaymentMethod(orderDTO.getOrder().getPaymentMethod());
+        newOrder.setNotes(orderDTO.getOrder().getNotes());
 
         Double totalAmount = 0.0;
 
-        for (OrderItemDTO itemDTO : orderDTO.getItems()) {
+        for (OrderItemDTO itemDTO : orderDTO.getOrderItems()) {
             Product product = productRepository.findById(itemDTO.getProductId())
                     .orElseThrow(() -> new RuntimeException("Product with ID " + itemDTO.getProductId() + " not found"));
 
@@ -103,5 +115,4 @@ public class OrderService {
 
         return savedOrder;
     }
-
 }
