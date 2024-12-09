@@ -3,29 +3,25 @@
 Sample format request body to place order
 {
   "customer": {
-    "customerId": null,
-    "customerName": "Hanh My",
-    "customerEmail": "ductai0110203@gmail.com",
-    "customerPhone": "123-456-7890",
-    "shippingAddress": "123 Main St, Anytown, USA"
+    "customerName": "Nguyen Van A",
+    "customerEmail": "nguyen@email.com",
+    "customerPhone": "0123456789",
+    "shippingAddress": "123 ABC Street"
   },
   "order": {
-    "shippingMethod": "Standard",
+    "shippingMethod": "Express",
     "paymentMethod": "Credit Card",
-    "notes": "Please deliver before 5 PM"
+    "notes": "Please deliver urgently"
   },
   "orderItems": [
     {
       "productId": 1,
-      "productName": "Product A",
-      "price": 50.0,
       "quantity": 2
     },
     {
       "productId": 2,
-      "productName": "Product B",
-      "price": 100.0,
       "quantity": 1
     }
   ]
 }
+
