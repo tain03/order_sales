@@ -151,8 +151,4 @@ mvn spring-boot:run
 - **Method**: `GET`
 - **Mô tả**: Lấy danh sách tất cả các đơn hàng.
 
-## License
-
-Dự án này được phát hành theo giấy phép MIT. Vui lòng tham khảo file LICENSE để biết thêm chi tiết.
-
 ---
