@@ -5,16 +5,23 @@ import com.example.order_sales.dto.OrderDTO;
 import com.example.order_sales.dto.OrderDetailsDTO;
 import com.example.order_sales.dto.OrderItemDTO;
 import com.example.order_sales.entity.*;
+import com.example.order_sales.exception.BadRequestException;
 import com.example.order_sales.repository.*;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.NoArgsConstructor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
 
 @Service
+@AllArgsConstructor
+@Builder
 public class OrderService {
 
     private final OrderRepository orderRepository;
@@ -23,68 +30,65 @@ public class OrderService {
     private final ProductRepository productRepository;
     private final OrderTransactionRepository orderTransactionRepository;
 
-    @Autowired
-    public OrderService(OrderRepository orderRepository, CustomerRepository customerRepository,
-                        OrderItemRepository orderItemRepository, ProductRepository productRepository,
-                        OrderTransactionRepository orderTransactionRepository) {
-        this.orderRepository = orderRepository;
-        this.customerRepository = customerRepository;
-        this.orderItemRepository = orderItemRepository;
-        this.productRepository = productRepository;
-        this.orderTransactionRepository = orderTransactionRepository;
-    }
 
     public List<OrderDTO> getAllOrders() {
         List<Order> orders = orderRepository.findAll();
 
         return orders.stream()
                 .map(order -> {
-                    CustomerDTO customerDTO = new CustomerDTO(
-//                            order.getCustomer().getCustomerId(),
-                            order.getCustomer().getFullName(),
-                            order.getCustomer().getEmail(),
-                            order.getCustomer().getPhone(),
-                            order.getCustomer().getAddress()
-                    );
+                    CustomerDTO customerDTO = CustomerDTO.builder()
+                            .customerName(order.getCustomer().getFullName())
+                            .customerEmail(order.getCustomer().getEmail())
+                            .customerPhone(order.getCustomer().getPhone())
+                            .shippingAddress(order.getCustomer().getAddress())
+                            .build();
 
-                    OrderDetailsDTO orderDetailsDTO = new OrderDetailsDTO(
-                            order.getOrderId(),
-                            order.getOrderDate(),
-                            order.getTotalAmount(),
-                            order.getShippingMethod(),
-                            order.getPaymentMethod(),
-                            order.getNotes()
-                    );
+                    OrderDetailsDTO orderDetailsDTO = OrderDetailsDTO.builder()
+                            .orderId(order.getOrderId())
+                            .orderDate(order.getOrderDate())
+                            .totalAmount(order.getTotalAmount())
+                            .shippingMethod(order.getShippingMethod())
+                            .paymentMethod(order.getPaymentMethod())
+                            .notes(order.getNotes())
+                            .build();
 
                     List<OrderItemDTO> orderItemDTOs = order.getOrderItems().stream()
-                            .map(item -> new OrderItemDTO(
-                                    item.getProduct().getProductId(),
-                                    item.getProduct().getProductName(),
-                                    item.getPrice(),
-                                    item.getQuantity(),
-                                    item.getPrice() * item.getQuantity()
-                            ))
+                            .map(item -> OrderItemDTO.builder()
+                                    .productId(item.getProduct().getProductId())
+                                    .productName(item.getProduct().getProductName())
+                                    .price(item.getPrice())
+                                    .quantity(item.getQuantity())
+                                    .totalAmount(item.getPrice() * item.getQuantity())
+                                    .build())
                             .collect(Collectors.toList());
 
-                    OrderDTO orderDTO = new OrderDTO();
-                    orderDTO.setCustomer(customerDTO);
-                    orderDTO.setOrder(orderDetailsDTO);
-                    orderDTO.setOrderItems(orderItemDTOs);
-
-                    return orderDTO;
+                    return OrderDTO.builder()
+                            .customer(customerDTO)
+                            .order(orderDetailsDTO)
+                            .orderItems(orderItemDTOs)
+                            .build();
                 })
                 .collect(Collectors.toList());
     }
 
-    @Transactional
+    @Transactional(rollbackFor = Exception.class)
     public Order createOrder(Customer customer, OrderDTO orderDTO) {
-        Order newOrder = new Order();
-        newOrder.setCustomer(customer);
-        newOrder.setOrderDate(LocalDateTime.now());
-        newOrder.setShippingAddress(orderDTO.getCustomer().getShippingAddress());
-        newOrder.setShippingMethod(orderDTO.getOrder().getShippingMethod());
-        newOrder.setPaymentMethod(orderDTO.getOrder().getPaymentMethod());
-        newOrder.setNotes(orderDTO.getOrder().getNotes());
+        if (customer.getEmail() == null || customer.getEmail().isEmpty()) {
+            throw new BadRequestException("Email cannot be null or empty!");
+        }
+
+        Order newOrder = Order.builder()
+                .customer(customer)
+                .orderDate(LocalDateTime.now())
+                .shippingAddress(orderDTO.getCustomer().getShippingAddress())
+                .shippingMethod(orderDTO.getOrder().getShippingMethod())
+                .paymentMethod(orderDTO.getOrder().getPaymentMethod())
+                .notes(orderDTO.getOrder().getNotes())
+                .build();
+
+        if (newOrder.getOrderItems() == null) {
+            newOrder.setOrderItems(new ArrayList<>());
+        }
 
         Double totalAmount = 0.0;
 
@@ -93,26 +97,24 @@ public class OrderService {
                     .orElseThrow(() -> new RuntimeException("Product with ID " + itemDTO.getProductId() + " not found"));
 
             Double productPrice = product.getPrice();
-            OrderItem orderItem = new OrderItem();
-            orderItem.setOrder(newOrder);
-            orderItem.setProduct(product);
-            orderItem.setPrice(productPrice);
-            orderItem.setQuantity(itemDTO.getQuantity());
+
+            OrderItem orderItem = OrderItem.builder()
+                    .order(newOrder)
+                    .product(product)
+                    .price(productPrice)
+                    .quantity(itemDTO.getQuantity())
+                    .build();
+
             newOrder.getOrderItems().add(orderItem);
             totalAmount += productPrice * itemDTO.getQuantity();
             orderItemRepository.save(orderItem);
         }
 
         newOrder.setTotalAmount(totalAmount);
+
         return orderRepository.save(newOrder);
     }
 
-    /**
-     * Updates the status of an order and creates a new transaction record for the change.
-     * @param orderId the ID of the order
-     * @param newStatus the new status to set
-     * @param notes optional notes for the status change (e.g., reason)
-     */
     @Transactional
     public void updateOrderStatus(Long orderId, OrderStatus newStatus, String notes) {
         Order order = orderRepository.findById(orderId)
@@ -121,13 +123,13 @@ public class OrderService {
         OrderTransaction lastTransaction = orderTransactionRepository.findFirstByOrderOrderByChangedAtDesc(order);
         OrderStatus previousStatus = (lastTransaction != null) ? lastTransaction.getCurrentStatus() : OrderStatus.CREATED;
 
-        OrderTransaction orderTransaction = new OrderTransaction();
-
-        orderTransaction.setOrder(order);
-        orderTransaction.setPreviousStatus(previousStatus);
-        orderTransaction.setCurrentStatus(newStatus);
-        orderTransaction.setChangedAt(LocalDateTime.now());
-        orderTransaction.setNotes(notes);
+        OrderTransaction orderTransaction = OrderTransaction.builder()
+                .order(order)
+                .previousStatus(previousStatus)
+                .currentStatus(newStatus)
+                .changedAt(LocalDateTime.now())
+                .notes(notes)
+                .build();
 
         orderTransactionRepository.save(orderTransaction);
     }

@@ -46,9 +46,8 @@ public class OrderController {
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
     public OrderDTO placeOrder(@RequestBody OrderDTO orderDTO) {
-        // Kiểm tra nếu không có customerId, tự tạo hoặc tra cứu khách hàng mới
         Customer customer = customerService.findOrCreateCustomer(
-                null,  // customerId là null nếu không có trong request
+                null,
                 orderDTO.getCustomer().getCustomerName(),
                 orderDTO.getCustomer().getCustomerEmail(),
                 orderDTO.getCustomer().getCustomerPhone(),
@@ -57,40 +56,36 @@ public class OrderController {
 
         Order newOrder = orderService.createOrder(customer, orderDTO);
 
-        // Chuyển đổi các item trong đơn hàng thành DTO
         List<OrderItemDTO> orderItemDTOs = newOrder.getOrderItems().stream()
-                .map(item -> new OrderItemDTO(
-                        item.getProduct().getProductId(),
-                        item.getProduct().getProductName(),
-                        item.getPrice(),
-                        item.getQuantity(),
-                        item.getPrice() * item.getQuantity()
-                ))
+                .map(item -> OrderItemDTO.builder()
+                        .productId(item.getProduct().getProductId())
+                        .productName(item.getProduct().getProductName())
+                        .price(item.getPrice())
+                        .quantity(item.getQuantity())
+                        .totalAmount(item.getPrice() * item.getQuantity())
+                        .build())
                 .collect(Collectors.toList());
 
-        // Chuyển đổi thông tin đơn hàng thành DTO
-        OrderDetailsDTO orderDetails = new OrderDetailsDTO(
-                newOrder.getOrderId(),
-                newOrder.getOrderDate(),
-                newOrder.getTotalAmount(),
-                newOrder.getShippingMethod(),
-                newOrder.getPaymentMethod(),
-                newOrder.getNotes()
-        );
+        OrderDetailsDTO orderDetails = OrderDetailsDTO.builder()
+                .orderId(newOrder.getOrderId())
+                .orderDate(newOrder.getOrderDate())
+                .totalAmount(newOrder.getTotalAmount())
+                .shippingMethod(newOrder.getShippingMethod())
+                .paymentMethod(newOrder.getPaymentMethod())
+                .notes(newOrder.getNotes())
+                .build();
 
-        // Chuyển đổi thông tin trả về
-        OrderDTO response = new OrderDTO();
-        response.setCustomer(new CustomerDTO(
-//                customer.getCustomerId(),
-                customer.getFullName(),
-                customer.getEmail(),
-                customer.getPhone(),
-                customer.getAddress()
-        ));
-        response.setOrder(orderDetails);
-        response.setOrderItems(orderItemDTOs);
+        OrderDTO response = OrderDTO.builder()
+                .customer(CustomerDTO.builder()
+                        .customerName(customer.getFullName())
+                        .customerEmail(customer.getEmail())
+                        .customerPhone(customer.getPhone())
+                        .shippingAddress(customer.getAddress())
+                        .build())
+                .order(orderDetails)
+                .orderItems(orderItemDTOs)
+                .build();
 
-        // Gửi email xác nhận đơn hàng
         String orderDetailsText = generateOrderDetails(newOrder);
         emailService.sendOrderConfirmationEmail(customer.getEmail(), orderDetailsText);
 
@@ -103,7 +98,6 @@ public class OrderController {
     public void updateOrderStatus(@PathVariable Long orderId,
                                   @RequestParam OrderStatus newStatus,
                                   @RequestParam(required = false) String notes) {
-        // Call the service to update the order status and log the transaction
         orderService.updateOrderStatus(orderId, newStatus, notes);
     }
 

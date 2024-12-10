@@ -2,6 +2,7 @@ package com.example.order_sales.entity;
 
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
+import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
@@ -9,6 +10,7 @@ import java.time.LocalDateTime;
 
 @Entity
 @Data
+@Builder
 public class OrderTransaction {
 
     @Id
@@ -19,11 +21,11 @@ public class OrderTransaction {
     @JoinColumn(name = "order_id", referencedColumnName = "orderId")
     private Order order;
 
-    @Enumerated(EnumType.STRING) // Lưu trạng thái dưới dạng chuỗi
-    private OrderStatus previousStatus;  // Trạng thái cũ
+    @Enumerated(EnumType.STRING)
+    private OrderStatus previousStatus;
 
-    @Enumerated(EnumType.STRING) // Lưu trạng thái dưới dạng chuỗi
-    private OrderStatus currentStatus;   // Trạng thái mới
+    @Enumerated(EnumType.STRING)
+    private OrderStatus currentStatus;
 
     private LocalDateTime changedAt;
     private String notes;
