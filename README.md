@@ -65,7 +65,7 @@ order-sales-system/
 1. **Clone Repository**
 
 ```bash
-git clone https://github.com/your-repository/order-sales-system.git
+git clone https://github.com/tain03/order_sales.git
 cd order-sales-system
 ```
 
@@ -96,7 +96,7 @@ Sau khi cài đặt và cấu hình, bạn có thể chạy ứng dụng bằng 
 mvn spring-boot:run
 ```
 
-Ứng dụng sẽ chạy trên `http://localhost:8080`.
+Ứng dụng sẽ chạy trên `http://localhost:8080/swagger-ui/index.html#/`.
 
 ### API Chính
 
