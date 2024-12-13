@@ -6,10 +6,12 @@ import com.example.order_sales.dto.OrderDetailsDTO;
 import com.example.order_sales.dto.OrderItemDTO;
 import com.example.order_sales.entity.*;
 import com.example.order_sales.exception.BadRequestException;
+import com.example.order_sales.exception.ProductNotFoundException;
 import com.example.order_sales.repository.*;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.NoArgsConstructor;
+import org.hibernate.validator.internal.util.logging.Log_$logger;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -71,30 +73,26 @@ public class OrderService {
                 .collect(Collectors.toList());
     }
 
-    @Transactional(rollbackFor = Exception.class)
+    @Transactional(rollbackFor = {Exception.class, BadRequestException.class, ProductNotFoundException.class})
     public Order createOrder(Customer customer, OrderDTO orderDTO) {
-        if (customer.getEmail() == null || customer.getEmail().isEmpty()) {
-            throw new BadRequestException("Email cannot be null or empty!");
-        }
+
+        Customer savedCustomer = customerRepository.save(customer);
 
         Order newOrder = Order.builder()
-                .customer(customer)
+                .customer(savedCustomer)
                 .orderDate(LocalDateTime.now())
                 .shippingAddress(orderDTO.getCustomer().getShippingAddress())
                 .shippingMethod(orderDTO.getOrder().getShippingMethod())
                 .paymentMethod(orderDTO.getOrder().getPaymentMethod())
                 .notes(orderDTO.getOrder().getNotes())
+                .orderItems(new ArrayList<>())
                 .build();
-
-        if (newOrder.getOrderItems() == null) {
-            newOrder.setOrderItems(new ArrayList<>());
-        }
 
         Double totalAmount = 0.0;
 
         for (OrderItemDTO itemDTO : orderDTO.getOrderItems()) {
             Product product = productRepository.findById(itemDTO.getProductId())
-                    .orElseThrow(() -> new RuntimeException("Product with ID " + itemDTO.getProductId() + " not found"));
+                    .orElseThrow(() -> new ProductNotFoundException("Product with ID " + itemDTO.getProductId() + " not found"));
 
             Double productPrice = product.getPrice();
 
@@ -107,13 +105,14 @@ public class OrderService {
 
             newOrder.getOrderItems().add(orderItem);
             totalAmount += productPrice * itemDTO.getQuantity();
-            orderItemRepository.save(orderItem);
         }
 
         newOrder.setTotalAmount(totalAmount);
 
         return orderRepository.save(newOrder);
     }
+
+
 
     @Transactional
     public void updateOrderStatus(Long orderId, OrderStatus newStatus, String notes) {
