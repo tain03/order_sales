@@ -88,7 +88,7 @@ public class OrderService {
                 .orderItems(new ArrayList<>())
                 .build();
 
-        Double totalAmount = 0.0;
+        double totalAmount = 0.0;
 
         for (OrderItemDTO itemDTO : orderDTO.getOrderItems()) {
             Product product = productRepository.findById(itemDTO.getProductId())

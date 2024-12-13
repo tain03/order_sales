@@ -17,7 +17,6 @@ public class CustomerService {
 
     @Transactional
     public Customer findOrCreateCustomer(Long customerId, String customerName, String customerEmail, String customerPhone, String shippingAddress) {
-        // Validate input attributes to ensure they are not null or empty
         if (customerEmail == null || customerEmail.isEmpty()) {
             throw new BadRequestException("Email cannot be null or empty!");
         }
@@ -31,13 +30,11 @@ public class CustomerService {
             throw new BadRequestException("Shipping address cannot be null or empty!");
         }
 
-        // If customerId is provided, attempt to fetch existing customer
         if (customerId != null) {
             return customerRepository.findById(customerId)
                     .orElseThrow(() -> new RuntimeException("Customer not found"));
         }
 
-        // Create new Customer if not found
         Customer newCustomer = Customer.builder()
                 .fullName(customerName)
                 .email(customerEmail)
@@ -45,7 +42,6 @@ public class CustomerService {
                 .address(shippingAddress)
                 .build();
 
-        // Save the new customer and return
         return customerRepository.save(newCustomer);
     }
 }
