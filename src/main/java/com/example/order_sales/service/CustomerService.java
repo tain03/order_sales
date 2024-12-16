@@ -6,6 +6,8 @@ import com.example.order_sales.repository.CustomerRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.Optional;
+
 @Service
 public class CustomerService {
 
@@ -33,15 +35,19 @@ public class CustomerService {
         if (customerId != null) {
             return customerRepository.findById(customerId)
                     .orElseThrow(() -> new RuntimeException("Customer not found"));
+        }  else {
+            Optional<Customer> existingCustomer = customerRepository.findByEmail(customerEmail);
+            if (existingCustomer.isPresent()) {
+                return existingCustomer.get();
+            } else {
+                Customer newCustomer = Customer.builder()
+                        .fullName(customerName)
+                        .email(customerEmail)
+                        .phone(customerPhone)
+                        .address(shippingAddress)
+                        .build();
+                return customerRepository.save(newCustomer);
+            }
         }
-
-        Customer newCustomer = Customer.builder()
-                .fullName(customerName)
-                .email(customerEmail)
-                .phone(customerPhone)
-                .address(shippingAddress)
-                .build();
-
-        return customerRepository.save(newCustomer);
     }
 }

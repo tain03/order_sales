@@ -86,7 +86,7 @@ public class OrderController {
                 .orderItems(orderItemDTOs)
                 .build();
 
-        String orderDetailsText = generateOrderDetails(newOrder);
+        String orderDetailsText = emailService.generateOrderDetails(newOrder);
         emailService.sendOrderConfirmationEmail(customer.getEmail(), orderDetailsText);
 
         return response;
@@ -101,24 +101,5 @@ public class OrderController {
         orderService.updateOrderStatus(orderId, newStatus, notes);
     }
 
-    private String generateOrderDetails(Order order) {
-        StringBuilder orderDetails = new StringBuilder();
-        orderDetails.append("Customer: ").append(order.getCustomer().getFullName()).append("\n");
-        orderDetails.append("Phone Number: ").append(order.getCustomer().getPhone()).append("\n");
-        orderDetails.append("Shipping Address: ").append(order.getShippingAddress()).append("\n");
-        orderDetails.append("Shipping Method: ").append(order.getShippingMethod()).append("\n");
-        orderDetails.append("Payment Method: ").append(order.getPaymentMethod()).append("\n");
-        orderDetails.append("Order Date: ").append(order.getOrderDate()).append("\n");
-        orderDetails.append("Total Amount: ").append(order.getTotalAmount()).append("\n");
-        orderDetails.append("\nOrder Items:\n");
 
-        for (OrderItem item : order.getOrderItems()) {
-            orderDetails.append(item.getProduct().getProductName())
-                    .append(" - Quantity: ").append(item.getQuantity())
-                    .append(" - Price: ").append(item.getPrice())
-                    .append("\n");
-        }
-
-        return orderDetails.toString();
-    }
 }
